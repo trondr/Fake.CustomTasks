@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>1.0.20068.2-alpha</Version>
+    <Company>github.com/trondr</Company>
+    <Authors>github.com/trondr</Authors>
+    <Description>SignTool</Description>
+    <PackageLicenseFile>License.txt</PackageLicenseFile>
+    <Copyright>Copyright &amp;#169; github.com/trondr 2020</Copyright>
+    <PackageProjectUrl>https://github.com/trondr/Fake.CustomTasks</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/trondr/Fake.CustomTasks.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>SignTool</PackageTags>
+    <PackageReleaseNotes>1.0.20068</PackageReleaseNotes>
+    <AssemblyVersion>1.0.20068.2</AssemblyVersion>
+    <FileVersion>1.0.20068.2</FileVersion>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="License.txt" />
+    <Compile Include="Library.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="License.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
