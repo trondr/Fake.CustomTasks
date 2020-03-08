@@ -95,10 +95,13 @@ Target.create "Test" (fun _ ->
         {p with ToolPath = nunitConsoleRunner;Where = "cat==UnitTests";TraceLevel=NUnit3.NUnit3TraceLevel.Verbose})
 )
 
-Target.create "Publish" (fun _ ->
-    Trace.trace "TODO: Publishing library to Nuget repository..."
-    let libFile = Fake.IO.Directory.tryFindFirstMatchingFile (appName + ".dll") buildLibFolder
-    let version = getVersion' libFile
+
+let toProjectAndVersion appName nupkgFileName =
+    let fileNameWithOutExtension = System.IO.Path.GetFileNameWithoutExtension(nupkgFileName)
+    let version = fileNameWithOutExtension.Replace(appName,"").Trim([|'.'|])
+    (appName, version)
+
+let getNugetPackageFile () =
     let nugetPackageFilePath = Fake.IO.Directory.tryFindFirstMatchingFile "*.nupkg" buildLibFolder
     let nugetPackageFile =
         match nugetPackageFilePath with
@@ -111,10 +114,16 @@ Target.create "Publish" (fun _ ->
             let artifactNugetPackageFile = nugetPackageFile.CopyTo(artifactNugetPackageFilePath)
             Trace.trace ("Nuget package to publish: " + artifactNugetPackageFile.FullName)
             Some artifactNugetPackageFile        
+    nugetPackageFile
+
+Target.create "Publish" (fun _ ->
+    Trace.trace "Publishing library to Nuget repository..."    
+    let nugetPackageFile = getNugetPackageFile()
     match nugetPackageFile with
     |None ->
         Fake.Runtime.Trace.traceError ("Failed to publish Nuget package to NuGet repository.")
     |Some f ->
+        let (project,version) = toProjectAndVersion appName f.Name    
         match NugetApiKey with
         |None ->
             Fake.Runtime.Trace.traceError ("Nuget ApiKey not set in environment variable 'NuGet.ApiKey'.")        
@@ -123,10 +132,11 @@ Target.create "Publish" (fun _ ->
             Fake.DotNet.NuGet.NuGet.NuGetPublish (fun o -> 
                 {o with 
                     AccessKey = apikey
-                    ToolPath = nugetExeFilePath
+                    ToolPath = nugetExeFilePath                    
+                    Project = project
+                    Version = version          
                     WorkingDir = artifactFolder
-                    Project = appName
-                    Version = version
+                    OutputPath = artifactFolder
                     Publish = false
                 }
             )

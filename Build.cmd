@@ -1,2 +1,2 @@
 @Echo Off
-fake run build.fsx
+fake run build.fsx -t "Test"

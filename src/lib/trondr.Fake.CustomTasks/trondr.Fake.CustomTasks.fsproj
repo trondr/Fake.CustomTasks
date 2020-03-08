@@ -5,9 +5,9 @@
     <Version>1.0.20068.2-alpha</Version>
     <Company>github.com/trondr</Company>
     <Authors>github.com/trondr</Authors>
-    <Description>SignTool</Description>
+    <Description>Provides simple SignTool support for use in FAKE  (F# Make) build script. FAKE will fully support SignTool later as the feature is currently in development (2020-03-08).</Description>
     <PackageLicenseFile>License.txt</PackageLicenseFile>
-    <Copyright>Copyright &amp;#169; github.com/trondr 2020</Copyright>
+    <Copyright>Copyright © github.com/trondr 2020</Copyright>
     <PackageProjectUrl>https://github.com/trondr/Fake.CustomTasks</PackageProjectUrl>
     <RepositoryUrl>https://github.com/trondr/Fake.CustomTasks.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
