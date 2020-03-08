@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <Content Include="License.txt" />
-    <Compile Include="Library.fs" />
+    <Compile Include="SignTool.fs" />
   </ItemGroup>
 
   <ItemGroup>
