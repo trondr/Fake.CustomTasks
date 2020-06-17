@@ -29,7 +29,45 @@ module SignTool =
         |Failed of string
         |Uknown
 
-    let internal signToolExe =
+    open System.IO
+    open System
+
+    type MachineType= 
+        |Native = 0us
+        |x86 = 0x014cus
+        |Itanium = 0x0200us
+        |x64 = 0x8664us
+        |Arm32 = 0x1c4us
+        |Arm64 = 0xaa64us
+
+    //Source: https://stackoverflow.com/questions/197951/how-can-i-determine-for-which-platform-an-executable-is-compiled
+    let getMachineTypeFromFile fileName =
+        let pe_pointer_offset = 60
+        let machine_offset = 4
+        let bufferSize = 4096
+        let mutable data:byte[] = Array.zeroCreate 4096
+        use s = new System.IO.FileStream(fileName,FileMode.Open,FileAccess.Read)
+        let bytesRead = s.Read(data,0,bufferSize)
+        // dos header is 64 bytes, last element, long (4 bytes) is the address of the PE heade
+        let pe_header_address = BitConverter.ToInt32(data, pe_pointer_offset)
+        let machineUint = BitConverter.ToUInt16(data,pe_header_address+machine_offset)        
+        let machineType = Microsoft.FSharp.Core.LanguagePrimitives.EnumOfValue<uint16, MachineType>(machineUint)
+        machineType
+
+    let getMachineTypeFromOperatingSystem () =
+        let is64BitOs = System.Environment.Is64BitOperatingSystem
+        match is64BitOs with
+        |true -> MachineType.x64
+        |false -> MachineType.x86
+
+    type ExeInfo =
+        {
+            Path : string
+            MachineType: MachineType
+            Version: Version
+        }
+
+    let internal getSignToolExe () =
         //Build list of search folders
         let programFilesFolders = 
             [
@@ -45,34 +83,41 @@ module SignTool =
                             ]
                 )
             |>List.concat
-        //Find all signtool.exe's
+        //Find all signtool.exe's and get machinetype and version for each instance found
         let signToolExes =
             searchFolders
             |>List.map (fun f -> 
                     let files = System.IO.Directory.GetFiles(f,"signtool.exe",System.IO.SearchOption.AllDirectories)
                     files                    
                     |>List.ofArray
-                )
+                )            
             |>List.concat
-            |>List.sortDescending
+            |>List.map(fun f -> 
+                    let machineType = getMachineTypeFromFile(f)
+                    let fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(f)
+                    let exeInfo =
+                        {
+                            Path = f
+                            MachineType = machineType
+                            Version = new System.Version(fileVersionInfo.ProductVersion)
+                        }
+                    exeInfo
+                )            
 
         //Find latest signtool.exe
-        let latestVersion file1 file2 =
-            let file1Version = System.Diagnostics.FileVersionInfo.GetVersionInfo(file1)
-            let file2Version = System.Diagnostics.FileVersionInfo.GetVersionInfo(file2)
-            let version1 = new System.Version(file1Version.ProductVersion)
-            let version2 = new System.Version(file2Version.ProductVersion)
-            if (version1 > version2) then
-                file1
+        let latestVersion exeFile1 exeFile2 =
+            if (exeFile1.Version > exeFile2.Version) then
+                exeFile1
             else
-                file2
+                exeFile2
 
         let firstFound = signToolExes.[0]
+        let osMachineType = getMachineTypeFromOperatingSystem()
         let signToolExe = 
             signToolExes
+            |> List.filter (fun f -> f.MachineType = osMachineType)
             |> List.fold latestVersion firstFound
         signToolExe
-
     
     let internal getSignToolArguments sha1Thumbprint description timeStampServer files =
         let signToolArguments = new StringBuilder()
@@ -102,7 +147,9 @@ module SignTool =
 
     let internal runSignToolUnsafe arguments =
         use signToolProcess = new System.Diagnostics.Process()
-        let startInfo = new System.Diagnostics.ProcessStartInfo(signToolExe,arguments)
+        let signToolExe = getSignToolExe()
+        printfn "Running: \"%s\" %s" signToolExe.Path arguments
+        let startInfo = new System.Diagnostics.ProcessStartInfo(signToolExe.Path, arguments)
         startInfo.UseShellExecute <- false
         startInfo.CreateNoWindow <- true
         startInfo.WorkingDirectory <- System.IO.Directory.GetCurrentDirectory()
@@ -122,7 +169,7 @@ module SignTool =
                 ex.Data.Add("signtool.exe",signToolExe)
                 reraise()
         if not started then
-            failwithf "Failed to start process %s" signToolExe        
+            failwithf "Failed to start process %s" signToolExe.Path        
         signToolProcess.BeginOutputReadLine()
         signToolProcess.BeginErrorReadLine()
         signToolProcess.WaitForExit()
